@@ -106,9 +106,6 @@ fn main() {
 
     let mut bcf = Reader::from_path(path).expect("Error opening file.");
 
-    let has_clnsig = bcf.header().info_type("CLNSIG".as_bytes()).is_ok();
-    let has_ann = bcf.header().info_type("ANN".as_bytes()).is_ok();
-
     let total_samples = bcf.header().sample_count();
 
     let client = reqwest::blocking::Client::new();
@@ -157,25 +154,17 @@ fn main() {
             .map(|x| str::from_utf8(x).unwrap().to_string())
             .collect();
 
-        let clnsig = if has_clnsig {
-            Some(get_info_field(&record, "CLNSIG").unwrap()[0].clone())
-        } else {
-            None
-        };
+        let clnsig = get_info_field(&record, "CLNSIG").map(|x| x[0].to_owned());
 
         let sample_count = record.info(NS.as_bytes()).integer().unwrap().unwrap()[0];
 
-        let (gene_symbol, variant_type, hgvs) = if has_ann {
-            let maybe_ann = get_info_field(&record, "ANN");
-            if let Some(ann) = maybe_ann {
-                let fields: Vec<Vec<String>> = ann.iter().map(|x| split_ann(x)).collect();
-                let gene_symbol = get_field(&fields, GENE_SYMBOL);
-                let variant_type = get_field(&fields, TYPE);
-                let hgvs = get_field(&fields, HGVS);
-                (Some(gene_symbol), Some(variant_type), Some(hgvs))
-            } else {
-                (None, None, None)
-            }
+        let maybe_ann = get_info_field(&record, "ANN");
+        let (gene_symbol, variant_type, hgvs) = if let Some(ann) = maybe_ann {
+            let fields: Vec<Vec<String>> = ann.iter().map(|x| split_ann(x)).collect();
+            let gene_symbol = get_field(&fields, GENE_SYMBOL);
+            let variant_type = get_field(&fields, TYPE);
+            let hgvs = get_field(&fields, HGVS);
+            (Some(gene_symbol), Some(variant_type), Some(hgvs))
         } else {
             (None, None, None)
         };
