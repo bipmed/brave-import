@@ -45,7 +45,7 @@ struct Variant {
     #[serde(rename = "alleleFrequency")]
     allele_frequency: Vec<f32>,
     #[serde(rename = "sampleCount")]
-    sample_count: i32,
+    sample_count: Option<i32>,
     coverage: Distribution,
     #[serde(rename = "genotypeQuality")]
     genotype_quality: Distribution,
@@ -108,6 +108,8 @@ fn main() {
 
     let total_samples = bcf.header().sample_count();
 
+    let has_ns = bcf.header().info_type(NS.as_bytes()).is_ok();
+
     let client = reqwest::blocking::Client::new();
     let url = format!("{}/variants", host);
 
@@ -156,7 +158,11 @@ fn main() {
 
         let clnsig = get_info_field(&record, "CLNSIG").map(|x| x[0].to_owned());
 
-        let sample_count = record.info(NS.as_bytes()).integer().unwrap().unwrap()[0];
+        let sample_count = if has_ns {
+            record.info(NS.as_bytes()).integer().unwrap().map(|x| x[0])
+        } else {
+            None
+        };
 
         let maybe_ann = get_info_field(&record, "ANN");
         let (gene_symbol, variant_type, hgvs) = if let Some(ann) = maybe_ann {
