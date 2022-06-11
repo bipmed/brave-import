@@ -12,7 +12,7 @@ const NS: &'static str = "NS";
 const DP: &'static str = "DP";
 const GQ: &'static str = "GQ";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Distribution {
     min: f32,
     q25: f32,
@@ -22,7 +22,7 @@ struct Distribution {
     mean: f32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Variant {
     id: Option<String>,
     #[serde(rename = "datasetId")]
@@ -89,6 +89,8 @@ struct Opts {
     dont_filter: bool,
     #[clap(long, about = "Just check VCF without connecting to server")]
     dryrun: bool,
+    #[clap(long, about = "Print variant data to stderr.")]
+    debug: bool,
     vcf_file: String,
 }
 
@@ -103,6 +105,7 @@ fn main() {
     let username = opts.username;
     let password = opts.password;
     let dryrun = opts.dryrun;
+    let debug = opts.debug;
 
     let mut bcf = Reader::from_path(path).expect("Error opening file.");
 
@@ -195,6 +198,10 @@ fn main() {
             variant_type,
         };
 
+        if debug {
+            eprintln!("{:?}", v);
+        }
+
         if dryrun {
             continue;
         }
@@ -215,12 +222,12 @@ fn main() {
 }
 
 fn calc_distribution(record: &Record, tag: &str) -> Distribution {
-    let mut values: Vec<i32> = record
+    let mut values: Vec<i64> = record
         .format(tag.as_bytes())
         .integer()
         .unwrap()
         .iter()
-        .map(|x| x[0])
+        .map(|x| x[0] as i64)
         .collect();
 
     values.sort();
@@ -231,7 +238,7 @@ fn calc_distribution(record: &Record, tag: &str) -> Distribution {
         median: percentile(&values, 50_f32),
         q75: percentile(&values, 75_f32),
         max: values[values.len() - 1] as f32,
-        mean: values.iter().sum::<i32>() as f32 / values.len() as f32,
+        mean: values.iter().sum::<i64>() as f32 / values.len() as f32,
     }
 }
 
@@ -257,7 +264,7 @@ fn get_info_field(record: &Record, tag: &str) -> Option<Vec<String>> {
 }
 
 // From https://doc.rust-lang.org/src/test/stats.rs.html
-fn percentile(sorted_values: &[i32], pct: f32) -> f32 {
+fn percentile(sorted_values: &[i64], pct: f32) -> f32 {
     assert!(!sorted_values.is_empty());
 
     if sorted_values.len() == 1 {

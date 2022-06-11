@@ -13,7 +13,7 @@ Binary file will be in `target/release/brave-import`, you might want to copy to 
 
 There are INFO columns required to build BraVE database properly, make sure that your VCF file has the following columns:
 
-- `NS` - Number of samples with data,
+- `NS` - Number of samples with data
 - `AF` - Allele frequency
 - `ANN` - Standard annotation format. Added by snpEff or ClinEff
 - `CLNSIG` - Variant clinical significance. Added by by snpEff or ClinEff
@@ -23,7 +23,8 @@ It accepts VCF files (v4.2) as input and submit variants to server instance. No 
 ```bash
 brave import \
     [--dont-filter] \
-    [--dry-run] \
+    [--dryrun] \
+    [--verbose] \
     [--host http://localhost:8080] \
     [--username admin] \
     [--password secret] \
