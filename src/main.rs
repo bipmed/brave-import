@@ -89,8 +89,10 @@ struct Opts {
     dont_filter: bool,
     #[clap(long, help = "Just check VCF without connecting to server")]
     dryrun: bool,
-    #[clap(long, help = "Print variant data to stderr.")]
+    #[clap(long, help = "Print variant data to stderr")]
     debug: bool,
+    #[clap(long, help = "Disable SSL certification verification")]
+    disable_ssl: bool,
     vcf_file: String,
 }
 
@@ -106,6 +108,7 @@ fn main() {
     let password = opts.password;
     let dryrun = opts.dryrun;
     let debug = opts.debug;
+    let disable_ssl = opts.disable_ssl;
 
     let mut bcf = Reader::from_path(path).expect("Error opening file.");
 
@@ -113,7 +116,8 @@ fn main() {
 
     let has_ns = bcf.header().info_type(NS.as_bytes()).is_ok();
 
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::Client::builder().danger_accept_invalid_certs(!disable_ssl);
+
     let url = format!("{}/variants", host);
 
     let mut total_variants: u32 = 0;
