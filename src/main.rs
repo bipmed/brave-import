@@ -117,7 +117,7 @@ fn main() {
     let has_ns = bcf.header().info_type(NS.as_bytes()).is_ok();
 
     let client = reqwest::blocking::Client::builder()
-        .danger_accept_invalid_certs(!disable_ssl)
+        .danger_accept_invalid_certs(disable_ssl)
         .build()
         .unwrap();
 
