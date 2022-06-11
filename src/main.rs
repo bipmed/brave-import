@@ -74,22 +74,22 @@ struct Opts {
     #[clap(
         long,
         default_value = "http://localhost:8080",
-        about = "URL to BraVE server"
+        help = "URL to BraVE server"
     )]
     host: String,
-    #[clap(long, about = "Dataset name")]
+    #[clap(long, help = "Dataset name")]
     dataset: String,
-    #[clap(long, about = "Genome assembly version")]
+    #[clap(long, help = "Genome assembly version")]
     assembly: String,
-    #[clap(long, default_value = "admin", about = "User name")]
+    #[clap(long, default_value = "admin", help = "User name")]
     username: String,
-    #[clap(long, about = "Password")]
+    #[clap(long, help = "Password")]
     password: Option<String>,
-    #[clap(long, about = "Don't filter variants by FILTER column")]
+    #[clap(long, help = "Don't filter variants by FILTER column")]
     dont_filter: bool,
-    #[clap(long, about = "Just check VCF without connecting to server")]
+    #[clap(long, help = "Just check VCF without connecting to server")]
     dryrun: bool,
-    #[clap(long, about = "Print variant data to stderr.")]
+    #[clap(long, help = "Print variant data to stderr.")]
     debug: bool,
     vcf_file: String,
 }
