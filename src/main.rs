@@ -168,7 +168,7 @@ fn main() {
             .map(|x| str::from_utf8(x).unwrap().to_string())
             .collect();
 
-        let clnsig = get_info_field(&record, "CLNSIG").map(|x| x[0].to_owned());
+        let clnsig = get_info_field(&record, "CLNSIG").map(|x| x.join(","));
 
         let sample_count = if has_ns {
             record.info(NS.as_bytes()).integer().unwrap().map(|x| x[0])
