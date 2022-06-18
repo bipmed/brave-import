@@ -1,8 +1,10 @@
 use clap::Parser;
 use reqwest::StatusCode;
+use rust_htslib::bcf::record::Numeric;
 use rust_htslib::bcf::{Read, Reader, Record};
 use rust_htslib::errors::Result;
 use serde::{Deserialize, Serialize};
+use statrs::statistics::{Data, Distribution, Max, Min, OrderStatistics};
 use std::str;
 
 const GENE_SYMBOL: usize = 3;
@@ -13,13 +15,13 @@ const DP: &'static str = "DP";
 const GQ: &'static str = "GQ";
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Distribution {
-    min: f32,
-    q25: f32,
-    median: f32,
-    q75: f32,
-    max: f32,
-    mean: f32,
+struct FormatDistribution {
+    min: f64,
+    q25: f64,
+    median: f64,
+    q75: f64,
+    max: f64,
+    mean: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -46,9 +48,9 @@ struct Variant {
     allele_frequency: Vec<f32>,
     #[serde(rename = "sampleCount")]
     sample_count: Option<i32>,
-    coverage: Distribution,
+    coverage: FormatDistribution,
     #[serde(rename = "genotypeQuality")]
-    genotype_quality: Distribution,
+    genotype_quality: FormatDistribution,
     clnsig: Option<String>,
     hgvs: Option<Vec<String>>,
     #[serde(rename = "type")]
@@ -228,24 +230,26 @@ fn main() {
     }
 }
 
-fn calc_distribution(record: &Record, tag: &str) -> Distribution {
-    let mut values: Vec<i64> = record
+fn calc_distribution(record: &Record, tag: &str) -> FormatDistribution {
+    let values: Vec<f64> = record
         .format(tag.as_bytes())
         .integer()
         .unwrap()
         .iter()
-        .map(|x| x[0] as i64)
+        .map(|x| x[0])
+        .filter(|x| !x.is_missing())
+        .map(|x| x as f64)
         .collect();
 
-    values.sort();
+    let mut data = Data::new(values);
 
-    Distribution {
-        min: values[0] as f32,
-        q25: percentile(&values, 25_f32),
-        median: percentile(&values, 50_f32),
-        q75: percentile(&values, 75_f32),
-        max: values[values.len() - 1] as f32,
-        mean: values.iter().sum::<i64>() as f32 / values.len() as f32,
+    FormatDistribution {
+        min: data.min(),
+        q25: data.lower_quartile(),
+        median: data.median(),
+        q75: data.upper_quartile(),
+        max: data.max(),
+        mean: data.mean().unwrap(),
     }
 }
 
@@ -268,32 +272,4 @@ fn get_info_field(record: &Record, tag: &str) -> Option<Vec<String>> {
             .map(|y| str::from_utf8(y).unwrap().to_string())
             .collect(),
     )
-}
-
-// From https://doc.rust-lang.org/src/test/stats.rs.html
-fn percentile(sorted_values: &[i64], pct: f32) -> f32 {
-    assert!(!sorted_values.is_empty());
-
-    if sorted_values.len() == 1 {
-        return sorted_values[0] as f32;
-    }
-
-    let zero: f32 = 0.0;
-    assert!(zero <= pct);
-
-    let hundred = 100_f32;
-    assert!(pct <= hundred);
-
-    if pct == hundred {
-        return sorted_values[sorted_values.len() - 1] as f32;
-    }
-
-    let length = (sorted_values.len() - 1) as f32;
-    let rank = (pct / hundred) * length;
-    let lrank = rank.floor();
-    let d = rank - lrank;
-    let n = lrank as usize;
-    let lo = sorted_values[n] as f32;
-    let hi = sorted_values[n + 1] as f32;
-    lo + (hi - lo) * d
 }
